@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeatUp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F6F2;--surface:#fff;--surface2:#F0EFE9;--border:#E2E0D8;--border2:#CCCAB8;
+  --text:#1C1B18;--text2:#6B6960;--text3:#A8A699;
+  --accent:#2D5BE3;--accent-bg:#EEF2FD;--accent-dark:#1A3EBC;
+  --mine:#2D5BE3;--taken-bg:#E8E7E1;--taken-text:#888;
+  --danger:#C0392B;--danger-bg:#FAEAEA;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(--text);font-size:14px;overscroll-behavior:none}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:600;gap:14px}
+.loading-logo{font-size:28px;font-weight:600;letter-spacing:-.5px}.loading-logo span{color:var(--accent)}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.loading-msg{font-size:13px;color:var(--text2)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:500;padding:20px}
+.login-box{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-logo{font-size:26px;font-weight:600;letter-spacing:-.5px;margin-bottom:4px}.login-logo span{color:var(--accent)}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.login-label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+.login-input{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;transition:border-color .15s;-webkit-appearance:none}
+.login-input:focus{border-color:var(--accent)}.login-input.err{border-color:var(--danger)}
+.login-err{font-size:12px;color:var(--danger);margin-top:5px;min-height:16px}
+.login-btn{width:100%;margin-top:16px;padding:12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit}
+.login-btn:active{background:var(--accent-dark)}
+
+/* APP */
+#app{display:none;flex-direction:column;height:100vh;height:100dvh}
+.topbar{display:flex;align-items:center;padding:0 16px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px}
+.logo{font-size:17px;font-weight:600;letter-spacing:-.5px;flex-shrink:0}.logo span{color:var(--accent)}
+.topbar-tabs{display:flex;gap:2px;background:var(--surface2);border-radius:7px;padding:3px;margin-left:auto;flex-shrink:0}
+.tab{padding:5px 12px;border-radius:5px;border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text2);font-family:inherit;font-weight:500}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.sync-badge{font-size:11px;padding:3px 8px;border-radius:5px;font-weight:500;transition:all .3s}
+.sync-ok{background:#E6F4EA;color:#1E6B35}
+.sync-saving{background:#FEF3E2;color:#7A4800}
+.sync-err{background:var(--danger-bg);color:var(--danger)}
+.user-chip{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px 4px 6px;cursor:pointer;flex-shrink:0;min-width:0}
+.user-avatar{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.user-name-chip{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px}
+
+.scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.content{max-width:680px;margin:0 auto;padding:16px}
+.page{display:none}.page.active{display:block}
+.section-title{font-size:14px;font-weight:600;margin-bottom:10px}
+
+/* ROOM CARDS */
+.room-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:20px}
+@media(min-width:480px){.room-grid{grid-template-columns:repeat(3,1fr)}}
+.room-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;position:relative}
+.room-card:active{border-color:var(--border2)}
+.room-card.selected-room{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.room-card-name{font-weight:600;font-size:13px;margin-bottom:2px;padding-right:36px}
+.room-card-sub{font-size:11px;color:var(--text2)}
+.room-badge{display:inline-block;margin-top:6px;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500}
+.b-ok{background:#E6F4EA;color:#1E6B35}.b-mid{background:#FEF3E2;color:#7A4800}.b-full{background:var(--surface2);color:var(--text3)}
+.room-edit-btn{position:absolute;top:8px;right:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text2);display:none}
+.admin-mode .room-edit-btn{display:block}
+.add-room-btn{display:none;align-items:center;justify-content:center;gap:5px;background:transparent;border:1.5px dashed var(--border2);border-radius:var(--radius);padding:14px;cursor:pointer;font-size:13px;color:var(--text2);font-family:inherit;width:100%}
+.admin-mode .add-room-btn{display:flex}
+
+/* SEAT PANEL */
+.seat-panel{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.panel-title{font-weight:600;font-size:14px}
+.back-btn{background:none;border:1px solid var(--border);border-radius:7px;cursor:pointer;color:var(--text2);font-size:12px;font-family:inherit;padding:5px 10px}
+.back-btn:active{background:var(--surface2)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.leg-box{width:14px;height:14px;border-radius:3px;border:1px solid var(--border);flex-shrink:0}
+.l-empty{background:var(--surface)}.l-taken{background:var(--taken-bg)}.l-mine{background:var(--mine)}.l-walk{background:var(--bg);border-style:dashed}
+.teacher-row{display:flex;justify-content:flex-end;margin-bottom:6px}
+.teacher-desk{background:var(--text);color:#F7F6F2;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:500}
+.seat-map-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.seat-map{display:inline-flex;flex-direction:column;gap:5px;min-width:fit-content}
+.seat-row-map{display:flex;gap:5px;align-items:center}
+.row-lbl{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;width:14px;text-align:center;flex-shrink:0}
+.seat{width:40px;height:40px;border-radius:7px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;font-weight:500;font-family:'IBM Plex Mono',monospace;background:var(--surface);color:var(--text2);flex-shrink:0;user-select:none;position:relative}
+.seat:active:not(.taken):not(.mine){background:var(--accent-bg);border-color:var(--accent)}
+.seat.taken{background:var(--taken-bg);color:var(--taken-text);cursor:pointer;border-color:transparent}
+.seat.mine{background:var(--mine);color:#fff;border-color:var(--accent-dark)}
+.seat.preview{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.seat.walkway{background:var(--bg);border:1.5px dashed var(--border);cursor:default;pointer-events:none}
+.name-popup{position:fixed;background:var(--text);color:#fff;font-size:12px;font-weight:500;padding:6px 12px;border-radius:8px;z-index:400;pointer-events:none;transition:opacity .2s;font-family:'IBM Plex Sans Thai',sans-serif;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.action-bar{display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px}
+.sel-info{font-size:12px;color:var(--text2)}
+.btn-row{display:flex;gap:8px}
+.book-btn{padding:10px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+.book-btn:active:not(:disabled){background:var(--accent-dark)}
+.book-btn:disabled{background:var(--surface2);color:var(--text3);cursor:default}
+.cancel-seat-btn{padding:10px 13px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--danger);font-size:13px;cursor:pointer;font-family:inherit}
+.cancel-seat-btn:active{background:var(--danger-bg)}
+
+/* BOOKINGS */
+.booking-item{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.bk-name{font-weight:500;font-size:13px}
+.bk-sub{font-size:12px;color:var(--text2);margin-top:2px;font-family:'IBM Plex Mono',monospace}
+.cancel-btn{padding:7px 12px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface);color:var(--danger);cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap}
+.cancel-btn:active{background:var(--danger-bg)}
+.empty-note{font-size:13px;color:var(--text3);padding:4px 0}
+
+/* FAB */
+.admin-fab{position:fixed;bottom:20px;right:16px;z-index:150}
+.fab-btn{width:50px;height:50px;border-radius:50%;border:none;background:var(--text);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.fab-btn.admin-active{background:var(--accent)}
+.fab-btn:active{transform:scale(.94)}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:540px){.modal-overlay{align-items:center;padding:16px}}
+.modal{background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 -4px 32px rgba(0,0,0,.15)}
+@media(min-width:540px){.modal{border-radius:14px;max-width:600px}}
+.modal-sm{max-width:360px}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 0;flex-shrink:0}
+@media(min-width:540px){.modal-handle{display:none}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-title{font-weight:600;font-size:15px}
+.modal-close{background:none;border:none;cursor:pointer;font-size:22px;color:var(--text2);padding:2px 6px;line-height:1}
+.modal-body{padding:16px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.field-label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+.field-input{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;transition:border-color .15s;-webkit-appearance:none}
+.field-input:focus{border-color:var(--accent)}.field-input.err{border-color:var(--danger)}
+.field-err{font-size:12px;color:var(--danger);margin-top:5px;visibility:hidden}
+.field-mb{margin-bottom:14px}
+.hint{font-size:12px;color:var(--text3);margin-top:4px}
+.dim-controls{display:flex;align-items:center;gap:14px;margin-bottom:6px;flex-wrap:wrap}
+.dim-group{display:flex;align-items:center;gap:8px}
+.dim-label{font-size:13px;color:var(--text2)}
+.dim-btn{width:32px;height:32px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-family:inherit;color:var(--text)}
+.dim-btn:active{background:var(--surface2)}
+.dim-val{font-size:15px;font-weight:500;font-family:'IBM Plex Mono',monospace;min-width:28px;text-align:center}
+.seat-count-info{font-size:12px;color:var(--text2);font-family:'IBM Plex Mono',monospace}
+.grid-controls{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.ctrl-btn{padding:7px 14px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;color:var(--text2)}
+.ctrl-btn:active{background:var(--surface2)}
+.ctrl-btn.active-ctrl{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);font-weight:500}
+.editor-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.editor-teacher{background:var(--text);color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.editor-grid{display:inline-flex;flex-direction:column;gap:5px;border:1.5px solid var(--border);border-radius:10px;padding:12px;background:var(--surface2)}
+.editor-row{display:flex;gap:5px}
+.ecell{width:38px;height:38px;border-radius:6px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;font-weight:500;font-family:'IBM Plex Mono',monospace;flex-shrink:0;user-select:none}
+.ecell:active{opacity:.7}
+.ecell.is-seat{background:var(--surface);border-color:var(--border2);color:var(--text2)}
+.ecell.is-walk{background:var(--bg);border-style:dashed;border-color:var(--border);color:transparent}
+.btn-primary{padding:11px 20px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn-primary:active{background:var(--accent-dark)}
+.btn-secondary{padding:11px 16px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-size:14px;cursor:pointer;font-family:inherit;color:var(--text2)}
+.btn-secondary:active{background:var(--surface2)}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:999;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-logo">Seat<span>Up</span></div>
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loading-msg">กำลังโหลดข้อมูล...</div>
+</div>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Seat<span>Up</span></div>
+    <div class="login-sub">ระบบจองที่นั่งห้องเรียน</div>
+    <label class="login-label">ชื่อของคุณ</label>
+    <input class="login-input" id="login-inp" type="text" placeholder="เช่น สมชาย ใจดี" maxlength="30" autocomplete="off">
+    <div class="login-err" id="login-err"></div>
+    <button class="login-btn" onclick="doLogin()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;flex-direction:column;height:100vh;height:100dvh">
+  <div class="topbar">
+    <div class="logo">Seat<span>Up</span></div>
+    <div class="topbar-tabs">
+      <button class="tab active" onclick="switchPage('book',this)">จองที่นั่ง</button>
+      <button class="tab" onclick="switchPage('mine',this)">ของฉัน</button>
+    </div>
+    <div class="topbar-right">
+      <span class="sync-badge sync-ok" id="sync-badge">✓ sync</span>
+      <div class="user-chip" onclick="logout()">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name-chip" id="user-display">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-area" id="main-content">
+    <div class="content">
+      <div class="page active" id="page-book">
+        <p class="section-title">เลือกห้องเรียน</p>
+        <div class="room-grid" id="room-grid"></div>
+        <div class="seat-panel" id="seat-panel" style="display:none">
+          <div class="panel-header">
+            <span class="panel-title" id="panel-title">—</span>
+            <button class="back-btn" onclick="closeRoom()">← เปลี่ยนห้อง</button>
+          </div>
+          <div class="legend">
+            <div class="leg"><div class="leg-box l-empty"></div>ว่าง</div>
+            <div class="leg"><div class="leg-box l-taken"></div>ถูกจอง</div>
+            <div class="leg"><div class="leg-box l-mine"></div>ที่นั่งของฉัน</div>
+            <div class="leg"><div class="leg-box l-walk"></div>ทางเดิน</div>
+          </div>
+          <div class="teacher-row"><div class="teacher-desk">📋 โต๊ะครู</div></div>
+          <div class="seat-map-scroll"><div class="seat-map" id="seat-map"></div></div>
+          <div class="action-bar">
+            <span class="sel-info" id="sel-info">แตะที่นั่งเพื่อเลือก</span>
+            <div class="btn-row">
+              <button class="cancel-seat-btn" id="cancel-mine-btn" style="display:none" onclick="cancelMyCurrentRoom()">ยกเลิก</button>
+              <button class="book-btn" id="book-btn" disabled onclick="doBook()">จองที่นั่ง</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page" id="page-mine">
+        <p class="section-title">การจองของฉัน</p>
+        <div id="my-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-fab">
+    <button class="fab-btn" id="fab-btn" onclick="fabClick()">⚙️</button>
+  </div>
+</div>
+
+<!-- PW MODAL -->
+<div class="modal-overlay" id="pw-modal" style="display:none" onclick="modalBg(event,'pw-modal')">
+  <div class="modal modal-sm">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">🔐 โหมดแอดมิน</span>
+      <button class="modal-close" onclick="closeModal('pw-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">รหัสผ่าน</label>
+      <input class="field-input" id="pw-inp" type="password" placeholder="กรอกรหัสผ่าน" onkeydown="if(event.key==='Enter')checkPw()">
+      <div class="field-err" id="pw-err">รหัสผ่านไม่ถูกต้อง</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('pw-modal')">ยกเลิก</button>
+      <button class="btn-primary" onclick="checkPw()">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR MODAL -->
+<div class="modal-overlay" id="editor-modal" style="display:none" onclick="modalBg(event,'editor-modal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">แก้ไขห้องเรียน</span>
+      <button class="modal-close" onclick="closeModal('editor-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-mb">
+        <label class="field-label">ชื่อห้อง</label>
+        <input class="field-input" id="ed-name" type="text" placeholder="เช่น ห้อง 201">
+      </div>
+      <div class="field-mb">
+        <label class="field-label">ขนาด Grid</label>
+        <div class="dim-controls">
+          <div class="dim-group">
+            <span class="dim-label">แถว</span>
+            <button class="dim-btn" onclick="adjDim('rows',-1)">−</button>
+            <span class="dim-val" id="dim-rows">4</span>
+            <button class="dim-btn" onclick="adjDim('rows',1)">+</button>
+          </div>
+          <div class="dim-group">
+            <span class="dim-label">คอลัมน์</span>
+            <button class="dim-btn" onclick="adjDim('cols',-1)">−</button>
+            <span class="dim-val" id="dim-cols">6</span>
+            <button class="dim-btn" onclick="adjDim('cols',1)">+</button>
+          </div>
+          <span class="seat-count-info" id="seat-count">ที่นั่ง: 0</span>
+        </div>
+        <p class="hint">ไม่จำกัดขนาด — เลื่อนซ้าย/ขวาได้ถ้าห้องใหญ่</p>
+      </div>
+      <div class="grid-controls">
+        <span style="font-size:13px;font-weight:500">โหมดแตะ:</span>
+        <button class="ctrl-btn active-ctrl" id="tool-seat-btn" onclick="setTool('seat')">🪑 ที่นั่ง</button>
+        <button class="ctrl-btn" id="tool-walk-btn" onclick="setTool('walk')">🚶 ทางเดิน</button>
+      </div>
+      <p class="hint" style="margin-bottom:12px">แตะ cell เพื่อสลับที่นั่ง / ทางเดิน</p>
+      <div class="editor-wrap">
+        <div class="editor-teacher">📋 โต๊ะครู (บนขวา)</div>
+        <div class="editor-grid" id="editor-grid"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('editor-modal')">ยกเลิก</button>
+      <button class="btn-primary" onclick="saveRoom()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════
+   JSONBIN CONFIG
+════════════════════════════════════════ */
+const API_KEY = '$2a$10$6a05a20fa52e261199165448';  // Master key
+const BIN_NAME = 'seatup-data';
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
+const SK_BIN_ID = 'seatup_bin_id';
+const SK_USER   = 'seatup_user';
+
+let BIN_ID = localStorage.getItem(SK_BIN_ID) || null;
+
+/* ════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════ */
+const AL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const ADMIN_PW = 'admin';
+function makeGrid(r,c,v=true){return Array.from({length:r},()=>Array(c).fill(v));}
+function seatId(r,c){return AL[r]+(c+1);}
+function seatCount(g){return g.flat().filter(Boolean).length;}
+
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+let currentUser = localStorage.getItem(SK_USER) || null;
+let isAdmin = false;
+let rooms = [];
+let bookings = [];
+let nextId = 1;
+let room = null, preview = null;
+let edRoomId = null, edGrid = [], edTool = 'seat';
+let isSaving = false;
+let pollTimer = null;
+
+const DEFAULT_DATA = {
+  rooms: [
+    {id:'R101',name:'ห้อง 101',grid:makeGrid(4,7)},
+    {id:'R102',name:'ห้อง 102',grid:(()=>{let g=makeGrid(4,6);g[1][3]=false;g[2][3]=false;return g;})()},
+    {id:'R201',name:'ห้อง 201',grid:makeGrid(5,7)},
+    {id:'R202',name:'ห้อง 202',grid:makeGrid(3,6)},
+  ],
+  bookings: [],
+  nextId: 1
+};
+
+/* ════════════════════════════════════════
+   JSONBIN API
+════════════════════════════════════════ */
+async function apiFetch(url, opts={}){
+  const res = await fetch(url, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': API_KEY,
+      ...(opts.headers||{})
+    }
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.json();
+}
+
+async function createBin(data){
+  const res = await apiFetch(`${JSONBIN_BASE}/b`, {
+    method: 'POST',
+    headers: {'X-Bin-Name': BIN_NAME, 'X-Bin-Private': 'false'},
+    body: JSON.stringify(data)
+  });
+  return res.metadata.id;
+}
+
+async function readBin(){
+  const res = await apiFetch(`${JSONBIN_BASE}/b/${BIN_ID}/latest`);
+  return res.record;
+}
+
+async function writeBin(data){
+  await apiFetch(`${JSONBIN_BASE}/b/${BIN_ID}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+/* ════════════════════════════════════════
+   SYNC
+════════════════════════════════════════ */
+function setSyncBadge(state){
+  const b = document.getElementById('sync-badge');
+  if(!b) return;
+  b.className = 'sync-badge';
+  if(state==='ok'){b.classList.add('sync-ok');b.textContent='✓ sync';}
+  else if(state==='saving'){b.classList.add('sync-saving');b.textContent='⏳ กำลังบันทึก';}
+  else{b.classList.add('sync-err');b.textContent='✗ ออฟไลน์';}
+}
+
+function applyData(data){
+  rooms    = data.rooms    || DEFAULT_DATA.rooms;
+  bookings = data.bookings || [];
+  nextId   = data.nextId   || 1;
+}
+
+async function pushData(){
+  if(!BIN_ID) return;
+  isSaving = true;
+  setSyncBadge('saving');
+  try{
+    await writeBin({rooms, bookings, nextId});
+    setSyncBadge('ok');
+  }catch(e){
+    setSyncBadge('err');
+    toast('บันทึกไม่สำเร็จ — เช็ค network');
+  }
+  isSaving = false;
+}
+
+async function pullData(){
+  if(!BIN_ID) return;
+  try{
+    const data = await readBin();
+    applyData(data);
+    renderAll();
+    setSyncBadge('ok');
+  }catch(e){
+    setSyncBadge('err');
+  }
+}
+
+function startPolling(){
+  stopPolling();
+  pollTimer = setInterval(pullData, 8000); // sync ทุก 8 วิ
+}
+function stopPolling(){clearInterval(pollTimer);}
+
+/* ════════════════════════════════════════
+   BOOT
+════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', async ()=>{
+  document.getElementById('login-inp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal('pw-modal');closeModal('editor-modal');}});
+  document.addEventListener('click',()=>{document.querySelectorAll('.name-popup').forEach(p=>p.remove());clearTimeout(popupTimer);});
+
+  setLoading('กำลังเชื่อมต่อ...');
+  try{
+    if(!BIN_ID){
+      setLoading('กำลังสร้างฐานข้อมูล...');
+      BIN_ID = await createBin(DEFAULT_DATA);
+      localStorage.setItem(SK_BIN_ID, BIN_ID);
+    }
+    setLoading('กำลังโหลดข้อมูล...');
+    const data = await readBin();
+    applyData(data);
+    setSyncBadge('ok');
+  }catch(e){
+    // fallback ถ้า network พัง ใช้ default
+    applyData(DEFAULT_DATA);
+    setSyncBadge('err');
+    toast('ไม่สามารถเชื่อมต่อได้ — ใช้ข้อมูล offline');
+  }
+
+  hideLoading();
+  if(currentUser) showApp();
+  else showLogin();
+  startPolling();
+});
+
+function setLoading(msg){document.getElementById('loading-msg').textContent=msg;}
+function hideLoading(){document.getElementById('loading-screen').style.display='none';}
+function showLogin(){document.getElementById('login-screen').style.display='flex';}
+function showLogin2(){document.getElementById('login-screen').style.display='flex';}
+
+/* ════════════════════════════════════════
+   LOGIN / LOGOUT
+════════════════════════════════════════ */
+function doLogin(){
+  const inp = document.getElementById('login-inp');
+  const name = inp.value.trim();
+  const err = document.getElementById('login-err');
+  if(name.length<2){inp.classList.add('err');err.textContent='ชื่อต้องมีอย่างน้อย 2 ตัวอักษร';return;}
+  currentUser = name;
+  inp.classList.remove('err');err.textContent='';
+  localStorage.setItem(SK_USER, currentUser);
+  document.getElementById('login-screen').style.display='none';
+  showApp();
+}
+function showApp(){
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
+  document.getElementById('user-display').textContent = currentUser;
+  document.getElementById('user-avatar').textContent = currentUser.charAt(0).toUpperCase();
+  renderAll();
+}
+function logout(){
+  if(!confirm('ออกจากระบบ?')) return;
+  currentUser = null; isAdmin = false; room = null; preview = null;
+  localStorage.removeItem(SK_USER);
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-inp').value = '';
+  document.getElementById('main-content').classList.remove('admin-mode');
+  document.getElementById('fab-btn').classList.remove('admin-active');
+  document.getElementById('fab-btn').textContent = '⚙️';
+  showLogin();
+}
+
+/* ════════════════════════════════════════
+   PAGES
+════════════════════════════════════════ */
+function switchPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='mine') renderMyList();
+}
+
+/* ════════════════════════════════════════
+   ROOMS
+════════════════════════════════════════ */
+function renderRooms(){
+  const g = document.getElementById('room-grid');
+  let h = rooms.map(r=>{
+    const tk = bookings.filter(b=>b.room===r.id).length;
+    const tot = seatCount(r.grid), free = tot-tk;
+    const pct = tot>0?Math.round(free/tot*100):0;
+    const bc = pct>50?'b-ok':pct>0?'b-mid':'b-full';
+    const bl = tot===0?'ยังไม่มีที่นั่ง':pct===0?'เต็มแล้ว':'ว่าง '+free+'/'+tot;
+    return`<div class="room-card${room===r.id?' selected-room':''}" onclick="openRoom('${r.id}')">
+      <button class="room-edit-btn" onclick="event.stopPropagation();editRoom('${r.id}')">✏️</button>
+      <div class="room-card-name">${r.name}</div>
+      <div class="room-card-sub">${r.grid.length}×${(r.grid[0]||[]).length} · ${tot} ที่นั่ง</div>
+      <span class="room-badge ${bc}">${bl}</span>
+    </div>`;
+  }).join('');
+  h += `<button class="add-room-btn" onclick="addRoom()">+ เพิ่มห้อง</button>`;
+  g.innerHTML = h;
+}
+
+/* ════════════════════════════════════════
+   SEAT MAP
+════════════════════════════════════════ */
+function openRoom(rid){
+  room=rid; preview=null; renderRooms();
+  const r = rooms.find(x=>x.id===rid);
+  document.getElementById('panel-title').textContent = r.name;
+  document.getElementById('seat-panel').style.display = 'block';
+  renderSeatMap(); updateBar();
+  document.getElementById('seat-panel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeRoom(){room=null;preview=null;document.getElementById('seat-panel').style.display='none';renderRooms();}
+
+function renderSeatMap(){
+  if(!room) return;
+  const r = rooms.find(x=>x.id===room);
+  const tk = bookings.filter(b=>b.room===room);
+  let h = '';
+  for(let row=0;row<r.grid.length;row++){
+    h += `<div class="seat-row-map"><div class="row-lbl">${AL[row]||row+1}</div>`;
+    for(let col=0;col<r.grid[row].length;col++){
+      if(!r.grid[row][col]){h+=`<div class="seat walkway"></div>`;continue;}
+      const s = seatId(row,col);
+      const bk = tk.find(b=>b.seat===s);
+      const isMe = bk&&bk.student===currentUser;
+      if(isMe){
+        h+=`<div class="seat mine" onclick="cancelMyCurrentRoom()">${s}</div>`;
+      }else if(bk){
+        const esc = bk.student.replace(/'/g,"\\'");
+        h+=`<div class="seat taken" onclick="showName(event,'${esc}',this)">${s}</div>`;
+      }else if(preview===s){
+        h+=`<div class="seat preview" onclick="pick('${s}')">${s}</div>`;
+      }else{
+        h+=`<div class="seat" onclick="pick('${s}')">${s}</div>`;
+      }
+    }
+    h += '</div>';
+  }
+  document.getElementById('seat-map').innerHTML = h;
+}
+
+/* NAME POPUP */
+let popupTimer = null;
+function showName(e,name,el){
+  e.stopPropagation();
+  document.querySelectorAll('.name-popup').forEach(p=>p.remove());
+  clearTimeout(popupTimer);
+  const p = document.createElement('div');
+  p.className = 'name-popup';
+  p.textContent = '🧑 '+name;
+  document.body.appendChild(p);
+  const rect = el.getBoundingClientRect();
+  const pw = p.offsetWidth||160;
+  let left = rect.left+rect.width/2-pw/2;
+  left = Math.max(8,Math.min(left,window.innerWidth-pw-8));
+  let top = rect.top-40; if(top<8) top=rect.bottom+8;
+  p.style.cssText = `left:${left}px;top:${top}px;opacity:1`;
+  popupTimer = setTimeout(()=>{p.style.opacity='0';setTimeout(()=>p.remove(),200);},2200);
+}
+
+function pick(s){preview=s;renderSeatMap();document.getElementById('sel-info').textContent='เลือก: '+s;updateBar();}
+
+function updateBar(){
+  const my = bookings.find(b=>b.student===currentUser&&b.room===room);
+  const bb = document.getElementById('book-btn'), cb = document.getElementById('cancel-mine-btn');
+  if(my){bb.disabled=true;bb.textContent='จองแล้ว ('+my.seat+')';cb.style.display='flex';}
+  else{cb.style.display='none';if(preview){bb.disabled=false;bb.textContent='จองที่นั่ง '+preview;}else{bb.disabled=true;bb.textContent='จองที่นั่ง';}}
+}
+
+async function doBook(){
+  if(!preview||!room||!currentUser) return;
+  if(bookings.find(b=>b.student===currentUser&&b.room===room)) return;
+  // refresh ก่อนเพื่อเช็คว่ามีคนจองไปก่อนมั้ย
+  await pullData();
+  if(bookings.find(b=>b.seat===preview&&b.room===room)){
+    toast('ที่นั่งนี้ถูกจองไปแล้ว');preview=null;renderSeatMap();updateBar();return;
+  }
+  bookings.push({id:nextId++,student:currentUser,room,seat:preview});
+  toast('จองที่นั่ง '+preview+' สำเร็จ!');
+  preview=null;
+  renderAll();
+  await pushData();
+}
+
+async function cancelMyCurrentRoom(){
+  const i = bookings.findIndex(b=>b.student===currentUser&&b.room===room);
+  if(i>-1){const s=bookings[i].seat;bookings.splice(i,1);toast('ยกเลิกที่นั่ง '+s+' แล้ว');renderAll();await pushData();}
+}
+
+async function cancelBooking(id){
+  const i = bookings.findIndex(b=>b.id===id);
+  if(i>-1){const wr=bookings[i].room;bookings.splice(i,1);toast('ยกเลิกแล้ว');renderAll();if(room===wr)renderSeatMap();await pushData();}
+}
+
+function renderMyList(){
+  const mine = bookings.filter(b=>b.student===currentUser);
+  const el = document.getElementById('my-list');
+  if(!mine.length){el.innerHTML='<p class="empty-note">ยังไม่มีการจอง</p>';return;}
+  el.innerHTML = mine.map(b=>{
+    const r = rooms.find(x=>x.id===b.room);
+    return`<div class="booking-item">
+      <div><div class="bk-name">${r?r.name:b.room}</div><div class="bk-sub">ที่นั่ง ${b.seat}</div></div>
+      <button class="cancel-btn" onclick="cancelBooking(${b.id})">ยกเลิก</button>
+    </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════
+   ADMIN
+════════════════════════════════════════ */
+function fabClick(){
+  if(isAdmin){exitAdmin();return;}
+  document.getElementById('pw-inp').value='';
+  document.getElementById('pw-err').style.visibility='hidden';
+  document.getElementById('pw-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('pw-inp').focus(),200);
+}
+function checkPw(){
+  if(document.getElementById('pw-inp').value===ADMIN_PW){closeModal('pw-modal');enterAdmin();}
+  else{document.getElementById('pw-err').style.visibility='visible';document.getElementById('pw-inp').value='';document.getElementById('pw-inp').focus();}
+}
+function enterAdmin(){
+  isAdmin=true;
+  document.getElementById('main-content').classList.add('admin-mode');
+  document.getElementById('fab-btn').classList.add('admin-active');
+  document.getElementById('fab-btn').textContent='🔓';
+  toast('เข้าสู่โหมดแอดมินแล้ว');renderRooms();
+}
+function exitAdmin(){
+  isAdmin=false;
+  document.getElementById('main-content').classList.remove('admin-mode');
+  document.getElementById('fab-btn').classList.remove('admin-active');
+  document.getElementById('fab-btn').textContent='⚙️';
+  toast('ออกจากโหมดแอดมินแล้ว');renderRooms();
+}
+
+/* ════════════════════════════════════════
+   EDITOR
+════════════════════════════════════════ */
+function addRoom(){
+  edRoomId=null;document.getElementById('ed-name').value='';
+  edGrid=makeGrid(4,6);
+  document.getElementById('dim-rows').textContent=4;
+  document.getElementById('dim-cols').textContent=6;
+  document.getElementById('modal-title').textContent='เพิ่มห้องเรียน';
+  setTool('seat');renderEditorGrid();
+  document.getElementById('editor-modal').style.display='flex';
+}
+function editRoom(rid){
+  const r=rooms.find(x=>x.id===rid);edRoomId=rid;
+  document.getElementById('ed-name').value=r.name;
+  edGrid=r.grid.map(row=>[...row]);
+  document.getElementById('dim-rows').textContent=edGrid.length;
+  document.getElementById('dim-cols').textContent=(edGrid[0]||[]).length;
+  document.getElementById('modal-title').textContent='แก้ไข '+r.name;
+  setTool('seat');renderEditorGrid();
+  document.getElementById('editor-modal').style.display='flex';
+}
+function setTool(t){
+  edTool=t;
+  document.getElementById('tool-seat-btn').classList.toggle('active-ctrl',t==='seat');
+  document.getElementById('tool-walk-btn').classList.toggle('active-ctrl',t==='walk');
+}
+function adjDim(dim,delta){
+  const rows=edGrid.length,cols=(edGrid[0]||[]).length;
+  if(dim==='rows'){const nr=Math.max(1,rows+delta);if(nr>rows)edGrid.push(Array(cols).fill(true));else if(nr<rows)edGrid.pop();}
+  else{const nc=Math.max(1,cols+delta);if(nc>cols)edGrid.forEach(r=>r.push(true));else if(nc<cols)edGrid.forEach(r=>r.pop());}
+  document.getElementById('dim-rows').textContent=edGrid.length;
+  document.getElementById('dim-cols').textContent=(edGrid[0]||[]).length;
+  renderEditorGrid();
+}
+function toggleCell(r,c){edGrid[r][c]=edTool==='seat'?!edGrid[r][c]:false;renderEditorGrid();}
+function renderEditorGrid(){
+  document.getElementById('seat-count').textContent='ที่นั่ง: '+seatCount(edGrid);
+  let h='';
+  for(let r=0;r<edGrid.length;r++){
+    h+=`<div class="editor-row">`;
+    for(let c=0;c<edGrid[r].length;c++){
+      const isSeat=edGrid[r][c];
+      h+=`<div class="ecell ${isSeat?'is-seat':'is-walk'}" onclick="toggleCell(${r},${c})">${isSeat?seatId(r,c):''}</div>`;
+    }
+    h+='</div>';
+  }
+  document.getElementById('editor-grid').innerHTML=h;
+}
+async function saveRoom(){
+  const name=document.getElementById('ed-name').value.trim();
+  if(!name){toast('กรุณาใส่ชื่อห้อง');return;}
+  if(seatCount(edGrid)===0){toast('ต้องมีที่นั่งอย่างน้อย 1 ที่');return;}
+  if(edRoomId){
+    const r=rooms.find(x=>x.id===edRoomId);
+    r.name=name;r.grid=edGrid.map(row=>[...row]);
+    const valid=new Set();
+    for(let row=0;row<r.grid.length;row++)for(let col=0;col<r.grid[row].length;col++)if(r.grid[row][col])valid.add(seatId(row,col));
+    bookings=bookings.filter(b=>b.room!==edRoomId||valid.has(b.seat));
+    toast('บันทึก '+name+' แล้ว');
+  }else{
+    rooms.push({id:'R'+Date.now(),name,grid:edGrid.map(row=>[...row])});
+    toast('เพิ่มห้อง '+name+' แล้ว');
+  }
+  closeModal('editor-modal');
+  if(room===edRoomId) renderSeatMap();
+  renderAll();
+  await pushData();
+}
+
+/* ════════════════════════════════════════
+   UTILS
+════════════════════════════════════════ */
+function closeModal(id){document.getElementById(id).style.display='none';}
+function modalBg(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+function renderAll(){renderRooms();if(room){renderSeatMap();updateBar();}renderMyList();}
+</script>
+</body>
+</html>
